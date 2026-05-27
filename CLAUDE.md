@@ -16,16 +16,16 @@ User is a Python beginner with some LLM API experience. Go step by step, explain
 
 ## Learning roadmap
 
-- [ ] **Step 1** — Project setup + raw LLM call (OpenAI, no LangGraph yet)
-- [ ] **Step 2** — First LangGraph graph (single node, understand state/nodes/edges)
-- [ ] **Step 3** — Multi-node pipeline (summarize → identify_causes → flag_risks)
-- [ ] **Step 4** — Conditional routing (agent makes decisions, not just processes)
+- [x] **Step 1** — Project setup + raw LLM call (OpenAI, no LangGraph yet)
+- [x] **Step 2** — First LangGraph graph (single node, understand state/nodes/edges)
+- [x] **Step 3** — Multi-node pipeline (summarize → identify_causes → flag_risks)
+- [x] **Step 4** — Conditional routing (agent makes decisions, not just processes)
 - [ ] **Step 5** — Tools (what separates a pipeline from an agent)
 - [ ] **Step 6** — Memory & persistence (LangGraph checkpointing)
 - [ ] **Step 7** — Full agent wired end to end with CLI
 - [ ] **Step 8** — Config, observability, tradeoffs (LangSmith, model choice, cost)
 
-**Current status: Step 1 not yet started** — blocked on Python setup (Xcode license issue on old laptop).
+**Current status: Step 4 complete. Up next: Step 5 — Tools.**
 
 ---
 
