@@ -1,54 +1,94 @@
-# What We're Building — Plain English Guide
+# Experiment Analysis Agent — Progress Guide
 
-## The goal
-
-We're building an **Experiment Analysis Agent**.
+## What we're building
 
 You paste in experiment results (like "we changed the button colour and conversion went up 0.6%") and the agent tells you:
-- What happened
-- Why it probably happened
+- What happened (summary)
+- Why it probably happened (causes)
 - What risks or confounders to watch out for
-- What to try next
 - Whether you should ship it, iterate, or drop it
+- How it compares to previous experiments on the same thread
 
-We're building it step by step using **LangGraph** — a framework for connecting AI calls together into a flow.
+Built step by step using **LangGraph** — a Python framework for connecting AI calls into a structured flow.
 
 ---
 
-## What we've built so far
+## Repo structure
 
-### Step 1 — `step1_raw_llm_call.py` ✅
+```
+steps/                        ← learning files, one per step
+  step1_raw_llm_call.py
+  step2_first_graph.py
+  step3_multi_node.py
+  step4_conditional_routing.py
+  step5_tools.py
+  step6_memory.py
+  step7_cli_agent.py          ← explains Step 7 concepts + points to production files
+  step8_config_observability.py ← explains Step 8 + verifies your setup
+
+agent.py                      ← production CLI (use this day to day)
+graph.py                      ← production graph (imported by agent.py)
+config.py                     ← production config (models, thresholds, settings)
+
+requirements.txt
+.env.example
+```
+
+---
+
+## How to run the agent
+
+```bash
+# Activate the virtual environment
+source .venv/bin/activate
+
+# Analyse an experiment
+python3 agent.py --thread checkout-tests
+
+# Show previous experiments on a thread
+python3 agent.py --thread checkout-tests --history
+```
+
+---
+
+## The 8 steps
+
+### Step 1 — `steps/step1_raw_llm_call.py` ✅
 **What it does:** Sends your experiment notes to OpenAI and prints a structured analysis.
 
-**What you learned:** How to talk to OpenAI from Python code. You write a system prompt (the instructions) and a user message (the input), and the model replies. Simple as that.
+**What you learned:** How to call OpenAI from Python. You write a system prompt (the instructions) and a user message (the input), and the model replies.
+
+```
+Your experiment notes → [OpenAI API call] → Structured analysis
+```
 
 ---
 
-### Step 2 — `step2_first_graph.py` ✅
-**What it does:** Same as Step 1, but wrapped inside a LangGraph graph.
+### Step 2 — `steps/step2_first_graph.py` ✅
+**What it does:** Same output as Step 1, but wrapped inside a LangGraph graph.
 
 **What you learned:** Three core LangGraph concepts:
-- **State** — a shared notepad that every step in the graph can read from and write to
-- **Node** — one box in the flowchart. Does one job, reads from state, writes back to state
-- **Edge** — the arrow connecting boxes. Tells the graph what runs next
+- **State** — a shared notepad every node can read from and write to
+- **Node** — one box in the flowchart; does one job, reads state, writes state
+- **Edge** — the arrow between boxes; tells the graph what runs next
 
-The output looked identical to Step 1 — that was intentional. We changed the structure, not the result.
+The output was identical to Step 1 — intentional. We changed the structure, not the result.
 
 ---
 
-### Step 3 — `step3_multi_node.py` ✅
-**What it does:** Splits the single analysis into three separate nodes that run in sequence.
+### Step 3 — `steps/step3_multi_node.py` ✅
+**What it does:** Splits the single analysis into three nodes that run in sequence.
 
 ```
 summarize → identify_causes → flag_risks
 ```
 
-**What you learned:** Each node builds on the previous one. `flag_risks` reads both the summary AND the causes before deciding what's risky — it's reasoning in layers. This is better than one big question because each step is focused.
+**What you learned:** Each node builds on the previous one. `flag_risks` reads the summary AND the causes before deciding what's risky — reasoning in layers rather than one big question.
 
 ---
 
-### Step 4 — `step4_conditional_routing.py` ✅
-**What it does:** Adds a fork in the road. After summarising, the agent checks if the experiment is trustworthy. If yes → full analysis. If no → warning message.
+### Step 4 — `steps/step4_conditional_routing.py` ✅
+**What it does:** Adds a fork. After summarising, the agent checks if the experiment is trustworthy. Valid → full analysis. Invalid → warning.
 
 ```
 summarize → check_validity → identify_causes → flag_risks
@@ -56,140 +96,118 @@ summarize → check_validity → identify_causes → flag_risks
                 warn_invalid
 ```
 
-**What you learned:** The difference between a **pipeline** (always does the same steps) and an **agent** (makes decisions). The conditional edge is just a function that reads state and returns the name of the next node to run.
+**What you learned:** The difference between a **pipeline** (always does the same steps) and an **agent** (makes decisions). The conditional edge is a function that reads state and returns the name of the next node.
 
 ---
 
-### Step 5 — `step5_tools.py` ✅
-**What it does:** Adds a real stats calculator tool — the agent now runs actual maths instead of guessing.
-
-A new node (`run_stats`) first asks the LLM to extract the numbers from the experiment text, then calls `calculate_stats` — a plain Python function — and writes the results to state. Every node after that has access to real numbers.
+### Step 5 — `steps/step5_tools.py` ✅
+**What it does:** Adds a real stats calculator. The agent now runs actual maths instead of guessing.
 
 `calculate_stats` returns:
 - **Uplift** — relative % change (e.g. +18.7%)
 - **Absolute change** — raw difference in percentage points
-- **Sample size check** — is there enough data to trust the result?
+- **Sample size check** — is there enough data?
 - **Duration check** — did the test run long enough?
-- **Significance** — two-proportion z-test, p-value and confidence level
+- **Significance** — two-proportion z-test with p-value
 
-**What you learned:** A tool is just a Python function the agent can call to get real information. The LLM extracts the numbers; the tool does the maths. `check_validity` in Step 4 was guessing — in Step 5 it has actual stats to work with.
+**What you learned:** A tool is a Python function the agent calls for real information. The LLM extracts numbers from text; the tool does the maths. `check_validity` now uses actual stats instead of guessing.
 
 ---
 
-## What's coming next
-
-### Step 6 — `step6_memory.py` ✅
-**What it does:** The agent now remembers previous experiments on the same thread and explicitly compares the current result against the last one.
-
-A `MemorySaver` checkpointer saves the graph state after every node. Each experiment stream has a `thread_id` (e.g. `"checkout-tests"`). Before each run, we call `get_state_history()` to find the last completed run on that thread and pass it in as `previous_run`. A new `compare` node at the end uses it to produce a direct comparison.
-
-Example output from Run 2:
-> *"The current uplift of 7.9% is lower than the previous colour test's 18.7%. The colour change had a stronger impact. Recommend iterating on the text rather than shipping."*
+### Step 6 — `steps/step6_memory.py` ✅
+**What it does:** The agent remembers previous experiments on the same thread and explicitly compares the current result against the last one.
 
 **What you learned:**
 - **MemorySaver** — saves state snapshots after each node runs
-- **thread_id** — identifies an experiment stream. Same thread = shared history
-- **get_state_history()** — lets you retrieve the last completed run's state before invoking
-- **compare node** — explicitly compares current vs previous, like a PM reviewing a series of tests
+- **thread_id** — identifies an experiment stream; same thread = shared history
+- **get_state_history()** — retrieves the last completed run's state before invoking
+- **compare node** — produces a direct comparison: *"This uplift is lower than the last test. Iterate."*
 
 ---
 
 ### Step 7 — `agent.py` + `graph.py` ✅
-**What it does:** The agent is now a real CLI tool you can run day to day.
+**What it does:** The agent becomes a real CLI tool you run day to day.
 
-Two files:
-- **`graph.py`** — all the LangGraph logic, cleanly separated and reusable
-- **`agent.py`** — the CLI entry point with formatted output and history display
+- **`graph.py`** — all LangGraph logic, cleanly separated and reusable
+- **`agent.py`** — the CLI entry point: takes input, runs the graph, formats output
 
-How to use it:
-```bash
-# Analyse an experiment (paste your notes, press Enter twice when done)
-python3 agent.py --thread checkout-tests
-
-# Show previous experiments on a thread
-python3 agent.py --thread checkout-tests --history
-```
-
-History persists to `memory.db` — a local SQLite file that survives between sessions. The `--history` flag shows all unique completed experiments on a thread.
+History persists to `memory.db` (SQLite) — survives between sessions.
 
 **What you learned:**
-- **SqliteSaver** — a database-backed checkpointer that persists state to a `.db` file across sessions (replaces MemorySaver for production use)
+- **SqliteSaver** — replaces MemorySaver; persists state to a `.db` file across sessions
 - **Separation of concerns** — graph logic in `graph.py`, CLI in `agent.py`
 - **argparse** — Python's standard library for building CLI tools with flags
 
----
+See `steps/step7_cli_agent.py` for an annotated walkthrough of the key patterns.
 
-## What's coming next
+---
 
 ### Step 8 — `config.py` + LangSmith ✅
-**What it does:** Central config controls model choices per node. LangSmith tracing is wired up and ready — just needs a card added to your LangSmith account to unlock API access.
+**What it does:** Central config controls model choices per node. LangSmith tracing gives you a dashboard to see inside every run.
 
-- **`config.py`** — one file to control model choices, thresholds, and settings across the whole agent
-- **Model routing** — `compare` uses `gpt-4o` (most important output), all other nodes use `gpt-4o-mini` (cheaper, faster, sufficient for simpler tasks)
-- **LangSmith** — when enabled, every run shows in a dashboard: each node, its input/output, latency, and token cost. To enable: add a card at smith.langchain.com, then set `LANGCHAIN_TRACING_V2=true` and `LANGSMITH_TRACING=true` in `.env`
+**Model routing (from `config.py`):**
+| Node | Model | Why |
+|---|---|---|
+| run_stats | gpt-4o-mini | Just extracting numbers |
+| summarize | gpt-4o-mini | Straightforward task |
+| check_validity | gpt-4o-mini | Binary yes/no |
+| identify_causes | gpt-4o-mini | Mini handles it well |
+| warn_invalid | gpt-4o-mini | Short message |
+| flag_risks | gpt-4o-mini | Concise bullets |
+| compare | gpt-4o | Most important output — worth the upgrade |
 
-**What you learned:**
-- **Config separation** — settings live in one place, not scattered through the graph
-- **Model tradeoffs** — not every node needs the same model. Match the model to the task complexity
-- **Observability** — tracing lets you see inside the agent: what ran, what it cost, where it slowed down
+**LangSmith** — when enabled, every run shows in your dashboard at `eu.smith.langchain.com`:
+each node, its prompt, response, latency, and token cost.
 
----
-
-## 🎉 All 8 steps complete
-
-You've built a full experiment analysis agent from scratch:
-- Raw LLM call → LangGraph graph → multi-node pipeline → conditional routing → tools → memory → CLI → config & observability
-
-The agent lives in `agent.py`. Run it with:
-```bash
-source .venv/bin/activate
-python3 agent.py --thread your-experiment-stream
+To enable: set these in `.env`:
+```
+LANGSMITH_API_KEY=your-key
+LANGSMITH_TRACING=true
+LANGSMITH_PROJECT=experiment-analysis-agent
+LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com
 ```
 
-### Step 6 — Memory
-The agent will remember previous experiments across sessions. So you can ask "how does this compare to last month's test?"
+**What you learned:**
+- **Config separation** — settings in one place, not scattered through the graph
+- **Model tradeoffs** — match model to task complexity; not every node needs gpt-4o
+- **Observability** — tracing shows what ran, what it cost, where it slowed down
 
-### Step 7 — Full CLI agent
-Everything wired together into one script you can actually use day to day.
-
-### Step 8 — Config & observability
-How to monitor what the agent is doing, control costs, and choose the right model for each step.
+Run `python3 steps/step8_config_observability.py` to verify your setup.
 
 ---
 
 ## Starting fresh on a new machine
-
-If you switch laptops, do this:
 
 ```bash
 # 1. Clone the repo
 git clone git@github-b11y:sandeepgarcha-b11y/agent-builder.git
 cd agent-builder
 
-# 2. Create the virtual environment
+# 2. Create virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Add your OpenAI key
-echo "OPENAI_API_KEY=your-key-here" > .env
+# 4. Set up .env
+cp .env.example .env
+# Edit .env and add your OPENAI_API_KEY and LANGSMITH_API_KEY
 ```
-
-Then pick up from wherever CLAUDE.md says we left off.
 
 ---
 
-## Key terms, simply explained
+## Key terms
 
 | Term | What it means |
 |---|---|
 | **LangGraph** | A framework for building AI workflows as a flowchart |
-| **State** | The shared notepad — holds all the data flowing through the graph |
+| **State** | The shared notepad — holds all data flowing through the graph |
 | **Node** | One step in the flowchart — a Python function that does one job |
 | **Edge** | The arrow between steps — tells the graph what runs next |
-| **Conditional edge** | An arrow that goes to different places depending on a decision |
-| **Tool** | Something that lets the agent reach outside itself (search, database, calculator) |
+| **Conditional edge** | An arrow that routes to different nodes based on a decision |
+| **Tool** | A Python function the agent calls for real data or calculations |
+| **Checkpointer** | Saves state after each node — enables memory and persistence |
+| **thread_id** | Identifies an experiment stream — same thread = shared history |
 | **Pipeline** | Always does the same steps in the same order |
 | **Agent** | Makes decisions about what to do next based on what it sees |
