@@ -2,14 +2,17 @@
 graph.py — The experiment analysis graph.
 
 All LangGraph logic lives here. agent.py imports and calls build_graph().
+Model choices and settings are read from config.py.
 """
 
 import json
 import math
+import os
 from typing import TypedDict, Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START, END
+from config import NODE_MODELS, MIN_SAMPLE_SIZE, MIN_TEST_DAYS
 
 load_dotenv()
 client = OpenAI()
@@ -34,15 +37,15 @@ def calculate_stats(
     uplift_pct = ((treatment_rate - control_rate) / control_rate) * 100
     absolute_change_pp = (treatment_rate - control_rate) * 100
 
-    if sample_size_per_variant < 1000:
-        sample_check = "⚠️  Too small (under 1,000/variant) — results unreliable."
+    if sample_size_per_variant < MIN_SAMPLE_SIZE:
+        sample_check = f"⚠️  Too small (under {MIN_SAMPLE_SIZE:,}/variant) — results unreliable."
     elif sample_size_per_variant < 5000:
         sample_check = "⚠️  Borderline (under 5,000/variant) — treat with caution."
     else:
         sample_check = f"✓  Adequate ({sample_size_per_variant:,}/variant)."
 
-    if test_days < 3:
-        duration_check = "⚠️  Too short (under 3 days) — won't capture weekly patterns."
+    if test_days < MIN_TEST_DAYS:
+        duration_check = f"⚠️  Too short (under {MIN_TEST_DAYS} days) — won't capture weekly patterns."
     elif test_days < 7:
         duration_check = f"⚠️  Short ({test_days} days) — consider running a full week."
     else:
@@ -94,11 +97,12 @@ class State(TypedDict):
 
 # ─────────────────────────────────────────────
 # NODES
+# Each node picks its model from NODE_MODELS in config.py
 # ─────────────────────────────────────────────
 
 def run_stats(state: State) -> dict:
     extraction = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=NODE_MODELS["run_stats"],
         response_format={"type": "json_object"},
         messages=[
             {
@@ -131,7 +135,7 @@ def summarize(state: State) -> dict:
         f"significance={state['stats']['significance']}"
     )
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=NODE_MODELS["summarize"],
         messages=[
             {"role": "system", "content": "Summarize this experiment in 2-3 sentences using the provided stats. Be factual and concise."},
             {"role": "user", "content": f"{state['experiment_input']}\n\n{stats_context}"},
@@ -150,7 +154,7 @@ def check_validity(state: State) -> dict:
         f"- Significance: {stats['significance']}"
     )
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=NODE_MODELS["check_validity"],
         messages=[
             {
                 "role": "system",
@@ -169,7 +173,7 @@ def check_validity(state: State) -> dict:
 
 def identify_causes(state: State) -> dict:
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=NODE_MODELS["identify_causes"],
         messages=[
             {"role": "system", "content": "List the most likely causes of the observed result. Max 4 bullet points."},
             {"role": "user", "content": f"Summary: {state['summary']}\nUplift: {state['stats']['uplift']}, Significance: {state['stats']['significance']}"},
@@ -187,7 +191,7 @@ def warn_invalid(state: State) -> dict:
         f"- Significance: {stats['significance']}"
     )
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=NODE_MODELS["warn_invalid"],
         messages=[
             {
                 "role": "system",
@@ -205,7 +209,7 @@ def warn_invalid(state: State) -> dict:
 
 def flag_risks(state: State) -> dict:
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=NODE_MODELS["flag_risks"],
         messages=[
             {"role": "system", "content": "List the key risks and confounders. Max 3 bullet points. Be concise."},
             {"role": "user", "content": f"Summary: {state['summary']}\nCauses: {state['causes']}\nStats: {json.dumps(state['stats'])}"},
@@ -237,7 +241,7 @@ Previous experiment on this thread:
 - Significance: {prev_stats.get('significance')}
 """
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=NODE_MODELS["compare"],
         messages=[
             {
                 "role": "system",
