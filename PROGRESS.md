@@ -94,8 +94,35 @@ Example output from Run 2:
 
 ---
 
-### Step 7 — Full CLI agent
-The agent will be able to reach outside itself — look things up, run calculations, query data. This is what separates a smart chatbot from something that can actually act in the world.
+### Step 7 — `agent.py` + `graph.py` ✅
+**What it does:** The agent is now a real CLI tool you can run day to day.
+
+Two files:
+- **`graph.py`** — all the LangGraph logic, cleanly separated and reusable
+- **`agent.py`** — the CLI entry point with formatted output and history display
+
+How to use it:
+```bash
+# Analyse an experiment (paste your notes, press Enter twice when done)
+python3 agent.py --thread checkout-tests
+
+# Show previous experiments on a thread
+python3 agent.py --thread checkout-tests --history
+```
+
+History persists to `memory.db` — a local SQLite file that survives between sessions. The `--history` flag shows all unique completed experiments on a thread.
+
+**What you learned:**
+- **SqliteSaver** — a database-backed checkpointer that persists state to a `.db` file across sessions (replaces MemorySaver for production use)
+- **Separation of concerns** — graph logic in `graph.py`, CLI in `agent.py`
+- **argparse** — Python's standard library for building CLI tools with flags
+
+---
+
+## What's coming next
+
+### Step 8 — Config, observability & tradeoffs
+LangSmith for monitoring, model choice, cost awareness.
 
 ### Step 6 — Memory
 The agent will remember previous experiments across sessions. So you can ask "how does this compare to last month's test?"

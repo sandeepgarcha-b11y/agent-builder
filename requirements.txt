@@ -1,5 +1,9 @@
-openai
-langgraph
-langchain-openai
-langchain-core
-python-dotenv
+langchain-core==0.3.86
+langchain-openai==0.3.35
+langgraph-checkpoint-sqlite==2.0.11
+langgraph-checkpoint==2.1.2
+langgraph-prebuilt==0.6.5
+langgraph-sdk==0.2.9
+langgraph==0.6.11
+openai==2.38.0
+python-dotenv==1.2.1
