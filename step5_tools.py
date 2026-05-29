@@ -81,12 +81,14 @@ def calculate_stats(
         p_value = 2 * (1 - 0.5 * (1 + math.erf(abs(z) / math.sqrt(2))))
         confidence = (1 - p_value) * 100
 
+        p_str = "p<0.001" if p_value < 0.001 else f"p={p_value:.3f}"
+
         if p_value < 0.05:
-            significance = f"✓ Significant (p={p_value:.3f}, ~{confidence:.0f}% confidence)"
+            significance = f"✓ Statistically significant ({p_str})"
         elif p_value < 0.10:
-            significance = f"⚠️ Borderline (p={p_value:.3f}, ~{confidence:.0f}% confidence)"
+            significance = f"⚠️ Borderline significant ({p_str})"
         else:
-            significance = f"✗ Not significant (p={p_value:.3f}, ~{confidence:.0f}% confidence)"
+            significance = f"✗ Not significant ({p_str})"
     else:
         significance = "Could not calculate significance."
 
