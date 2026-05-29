@@ -60,9 +60,25 @@ summarize → check_validity → identify_causes → flag_risks
 
 ---
 
+### Step 5 — `step5_tools.py` ✅
+**What it does:** Adds a real stats calculator tool — the agent now runs actual maths instead of guessing.
+
+A new node (`run_stats`) first asks the LLM to extract the numbers from the experiment text, then calls `calculate_stats` — a plain Python function — and writes the results to state. Every node after that has access to real numbers.
+
+`calculate_stats` returns:
+- **Uplift** — relative % change (e.g. +18.7%)
+- **Absolute change** — raw difference in percentage points
+- **Sample size check** — is there enough data to trust the result?
+- **Duration check** — did the test run long enough?
+- **Significance** — two-proportion z-test, p-value and confidence level
+
+**What you learned:** A tool is just a Python function the agent can call to get real information. The LLM extracts the numbers; the tool does the maths. `check_validity` in Step 4 was guessing — in Step 5 it has actual stats to work with.
+
+---
+
 ## What's coming next
 
-### Step 5 — Tools
+### Step 6 — Memory
 The agent will be able to reach outside itself — look things up, run calculations, query data. This is what separates a smart chatbot from something that can actually act in the world.
 
 ### Step 6 — Memory
