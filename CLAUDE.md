@@ -21,11 +21,11 @@ User is a Python beginner with some LLM API experience. Go step by step, explain
 - [x] **Step 3** — Multi-node pipeline (summarize → identify_causes → flag_risks)
 - [x] **Step 4** — Conditional routing (agent makes decisions, not just processes)
 - [x] **Step 5** — Tools (what separates a pipeline from an agent)
-- [ ] **Step 6** — Memory & persistence (LangGraph checkpointing)
+- [x] **Step 6** — Memory & persistence (LangGraph checkpointing)
 - [ ] **Step 7** — Full agent wired end to end with CLI
 - [ ] **Step 8** — Config, observability, tradeoffs (LangSmith, model choice, cost)
 
-**Current status: Step 5 complete. Up next: Step 6 — Memory & persistence.**
+**Current status: Step 6 complete. Up next: Step 7 — Full agent wired end to end with CLI.**
 
 ---
 

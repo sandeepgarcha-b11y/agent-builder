@@ -78,7 +78,23 @@ A new node (`run_stats`) first asks the LLM to extract the numbers from the expe
 
 ## What's coming next
 
-### Step 6 — Memory
+### Step 6 — `step6_memory.py` ✅
+**What it does:** The agent now remembers previous experiments on the same thread and explicitly compares the current result against the last one.
+
+A `MemorySaver` checkpointer saves the graph state after every node. Each experiment stream has a `thread_id` (e.g. `"checkout-tests"`). Before each run, we call `get_state_history()` to find the last completed run on that thread and pass it in as `previous_run`. A new `compare` node at the end uses it to produce a direct comparison.
+
+Example output from Run 2:
+> *"The current uplift of 7.9% is lower than the previous colour test's 18.7%. The colour change had a stronger impact. Recommend iterating on the text rather than shipping."*
+
+**What you learned:**
+- **MemorySaver** — saves state snapshots after each node runs
+- **thread_id** — identifies an experiment stream. Same thread = shared history
+- **get_state_history()** — lets you retrieve the last completed run's state before invoking
+- **compare node** — explicitly compares current vs previous, like a PM reviewing a series of tests
+
+---
+
+### Step 7 — Full CLI agent
 The agent will be able to reach outside itself — look things up, run calculations, query data. This is what separates a smart chatbot from something that can actually act in the world.
 
 ### Step 6 — Memory
