@@ -23,9 +23,11 @@ User is a Python beginner with some LLM API experience. Go step by step, explain
 - [x] **Step 5** — Tools (what separates a pipeline from an agent)
 - [x] **Step 6** — Memory & persistence (LangGraph checkpointing)
 - [x] **Step 7** — Full agent wired end to end with CLI
-- [ ] **Step 8** — Config, observability, tradeoffs (LangSmith, model choice, cost)
+- [x] **Step 8** — Config, observability, tradeoffs (LangSmith, model choice, cost)
 
-**Current status: Step 7 complete. Up next: Step 8 — Config, observability, tradeoffs.**
+**Current status: All 8 steps complete. 🎉**
+
+**To enable LangSmith tracing:** add a card at smith.langchain.com (free tier, no charge under 5,000 traces/month), then set LANGCHAIN_TRACING_V2=true and LANGSMITH_TRACING=true in .env.
 
 ---
 

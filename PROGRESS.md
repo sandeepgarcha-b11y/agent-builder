@@ -121,8 +121,30 @@ History persists to `memory.db` — a local SQLite file that survives between se
 
 ## What's coming next
 
-### Step 8 — Config, observability & tradeoffs
-LangSmith for monitoring, model choice, cost awareness.
+### Step 8 — `config.py` + LangSmith ✅
+**What it does:** Central config controls model choices per node. LangSmith tracing is wired up and ready — just needs a card added to your LangSmith account to unlock API access.
+
+- **`config.py`** — one file to control model choices, thresholds, and settings across the whole agent
+- **Model routing** — `compare` uses `gpt-4o` (most important output), all other nodes use `gpt-4o-mini` (cheaper, faster, sufficient for simpler tasks)
+- **LangSmith** — when enabled, every run shows in a dashboard: each node, its input/output, latency, and token cost. To enable: add a card at smith.langchain.com, then set `LANGCHAIN_TRACING_V2=true` and `LANGSMITH_TRACING=true` in `.env`
+
+**What you learned:**
+- **Config separation** — settings live in one place, not scattered through the graph
+- **Model tradeoffs** — not every node needs the same model. Match the model to the task complexity
+- **Observability** — tracing lets you see inside the agent: what ran, what it cost, where it slowed down
+
+---
+
+## 🎉 All 8 steps complete
+
+You've built a full experiment analysis agent from scratch:
+- Raw LLM call → LangGraph graph → multi-node pipeline → conditional routing → tools → memory → CLI → config & observability
+
+The agent lives in `agent.py`. Run it with:
+```bash
+source .venv/bin/activate
+python3 agent.py --thread your-experiment-stream
+```
 
 ### Step 6 — Memory
 The agent will remember previous experiments across sessions. So you can ask "how does this compare to last month's test?"

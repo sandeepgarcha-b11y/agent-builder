@@ -7,6 +7,11 @@ Usage:
   python3 agent.py --thread checkout-tests --history  # show past experiments
 """
 
+# load_dotenv must run before any LangChain/LangGraph imports
+# so LangSmith picks up LANGCHAIN_API_KEY at initialisation time
+from dotenv import load_dotenv
+load_dotenv()
+
 import argparse
 import sys
 from datetime import datetime
